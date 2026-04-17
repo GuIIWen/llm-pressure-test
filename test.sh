@@ -17,15 +17,19 @@
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 CLIENT="$SCRIPT_DIR/pressure_client.js"
+LOG_FILE="$SCRIPT_DIR/pressure_client.log"
 
 # 默认值
 HOST="127.0.0.1"
 PORT=4000
 MODE="mixed"
 CONCURRENCY=100
+WORKERS=0
 REQUESTS=0
+DURATION=300
 INPUT_LENGTH=100
 INTERVAL=3
+LOG_FILE=${LOG_FILE:-}   # 留空则只输出到终端
 
 # 预设场景
 run_scenario() {
@@ -70,8 +74,11 @@ while [[ $# -gt 0 ]]; do
     --mode)         MODE="$2";         shift 2 ;;
     -c|--concurrency) CONCURRENCY="$2"; shift 2 ;;
     -n|--requests)  REQUESTS="$2";     shift 2 ;;
+    -d|--duration)  DURATION="$2";     shift 2 ;;
     -i|--input)     INPUT_LENGTH="$2"; shift 2 ;;
+    -w|--workers)   WORKERS="$2";     shift 2 ;;
     --interval)     INTERVAL="$2";     shift 2 ;;
+    --log)          LOG_FILE="$2";     shift 2 ;;
     -h|--help)
       echo "用法: $0 [选项] | scenario <名称>"
       echo ""
@@ -79,10 +86,12 @@ while [[ $# -gt 0 ]]; do
       echo "  --host <addr>         目标地址 (默认: 127.0.0.1)"
       echo "  --port <port>         目标端口 (默认: 4000)"
       echo "  --mode <mode>         stream | full | mixed (默认: mixed)"
-      echo "  -c, --concurrency     并发数 (默认: 100)"
+      echo "  -c, --concurrency     每 Worker 并发数 (默认: 100)"
+      echo "  -w, --workers         Worker 数，0=全部核心 (默认: 0)"
       echo "  -n, --requests        总请求数，0=无限 (默认: 0)"
       echo "  -i, --input           输入文本长度/字符数 (默认: 100)"
       echo "  --interval <sec>      统计间隔 (默认: 3)"
+      echo "  --log <file>         日志输出文件 (默认: 仅终端)"
       echo ""
       echo "预设场景:"
       echo "  $0 scenario quick        快速验证 (50并发, 200请求)"
@@ -111,9 +120,9 @@ fi
 
 # 检查服务端是否可达
 if ! node -e "
-  const https = require('https');
-  const req = https.request({hostname:'$HOST',port:$PORT,path:'/',method:'GET',rejectUnauthorized:false}, () => process.exit(0));
-  req.on('error', () => { console.error('错误: 无法连接到 https://$HOST:$PORT'); process.exit(1); });
+  const http = require('http');
+  const req = http.request({hostname:'$HOST',port:$PORT,path:'/',method:'GET'}, () => process.exit(0));
+  req.on('error', () => { console.error('错误: 无法连接到 http://$HOST:$PORT'); process.exit(1); });
   req.setTimeout(3000, () => { console.error('错误: 连接超时'); process.exit(1); });
   req.end();
 " 2>/dev/null; then
@@ -126,18 +135,29 @@ echo "  压力测试"
 echo "========================================="
 echo "  目标:     https://$HOST:$PORT"
 echo "  模式:     $MODE"
-echo "  并发:     $CONCURRENCY"
+echo "  并发:     $CONCURRENCY (每 Worker)"
+echo "  Workers:  ${WORKERS:-全部核心}"
 echo "  请求数:   ${REQUESTS:-无限}"
+echo "  时长:     ${DURATION}s"
 echo "  输入长度: $INPUT_LENGTH 字符"
+echo "  日志:     ${LOG_FILE:-仅终端}"
 echo "========================================="
 echo ""
 
 # 启动客户端
-node "$CLIENT" \
-  --host "$HOST" \
-  --port "$PORT" \
-  --mode "$MODE" \
-  -c "$CONCURRENCY" \
-  -n "$REQUESTS" \
-  -i "$INPUT_LENGTH" \
-  --interval "$INTERVAL"
+RUN_CMD="node \"$CLIENT\" \
+  --host \"$HOST\" \
+  --port \"$PORT\" \
+  --mode \"$MODE\" \
+  -c \"$CONCURRENCY\" \
+  -w \"$WORKERS\" \
+  -n \"$REQUESTS\" \
+  -d \"$DURATION\" \
+  -i \"$INPUT_LENGTH\" \
+  --interval \"$INTERVAL\""
+
+if [ -n "$LOG_FILE" ]; then
+  eval "$RUN_CMD" 2>&1 | tee "$LOG_FILE"
+else
+  eval "$RUN_CMD"
+fi

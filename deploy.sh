@@ -57,7 +57,8 @@ start() {
   echo "  证书: ${CERT_KEY:-./cert/key.pem} / ${CERT_CERT:-./cert/cert.pem}"
   echo "  日志: $LOG_FILE"
 
-  nohup ${env_prefix}node "$SERVER_SCRIPT" > "$LOG_FILE" 2>&1 &
+  nohup setsid env ${env_prefix}node "$SERVER_SCRIPT" >> "$LOG_FILE" 2>&1 &
+  disown
   local pid=$!
   echo $pid > "$PID_FILE"
 

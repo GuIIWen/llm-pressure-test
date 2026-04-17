@@ -21,8 +21,8 @@ const CONFIG = {
 
   // LLM 延迟模拟
   latency: {
-    ttft: 500,    // Time To First Token，首字延迟(ms)，模拟 prefill 阶段
-    tpot: 50      // Time Per Output Token，每字间隔(ms)，模拟 decode 阶段
+    ttft: 10,     // Time To First Token，首字延迟(ms)
+    tpot: 5       // Time Per Output Token，每字间隔(ms)
   },
 
   // 流式响应配置
