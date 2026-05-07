@@ -2,6 +2,10 @@
 
 模拟 LLM（DeepSeek R1）的流式/非流式 API 行为，用于网关、前端等组件的压力测试。
 
+## 架构文档
+
+- [部署架构文档](./docs/DEPLOYMENT_ARCHITECTURE.md)
+
 ## 文件结构
 
 ```
@@ -10,6 +14,8 @@
 ├── pressure_server.js           # 单核版（原始版本）
 ├── deploy.sh                    # 服务端部署/管理脚本
 ├── test.sh                      # 客户端测试脚本
+├── docs/
+│   └── DEPLOYMENT_ARCHITECTURE.md  # ELB/APIG/VPCEP/ECS/ModelArts 部署架构说明
 └── cert/                        # TLS 证书目录
     ├── key.pem
     └── cert.pem
